@@ -6,6 +6,7 @@ import (
 	"flag"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -27,17 +28,31 @@ const (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Error("Error loading .env")
+		log.Error("Error loading .env", err)
 	}
+	
+	/* TODO: convert to viper for flags & config */
 	sshMode := flag.Bool("ssh", false, "run as SSH‐served TUI")
 	sshAddr := flag.String("addr", defaultSSHAddr, "SSH listen address (host:port)")
 	flag.Parse()
 
-	// configure logging to file
-	f, err := os.OpenFile("trip.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	/* configure logging to file in user config directory */ 
+	/* TODO: change log directory? */
+	confDir, err := os.UserConfigDir()
 	if err != nil {
 		panic(err)
 	}
+
+	tripConfigDir := filepath.Join(confDir, "trip")
+	if err := os.MkdirAll(tripConfigDir, 0755); err != nil {
+		panic(err)
+	}
+
+	f, err := os.OpenFile(filepath.Join(tripConfigDir, "trip.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644);
+	if err != nil {
+		panic(err)
+	}
+
 	log.SetOutput(f)
 	log.SetLevel(log.DebugLevel)
 	log.SetReportCaller(true)
