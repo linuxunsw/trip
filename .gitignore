@@ -38,3 +38,8 @@ trip.log
 # Editor/IDE
 # .idea/
 # .vscode/
+
+
+# Added by cargo
+
+/target

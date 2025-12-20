@@ -1,25 +1,33 @@
 {
-  pkgs ? (
-    let
-      inherit (builtins) fetchTree fromJSON readFile;
-      inherit ((fromJSON (readFile ./flake.lock)).nodes) nixpkgs gomod2nix;
-    in
-    import (fetchTree nixpkgs.locked) {
-      overlays = [
-        (import "${fetchTree gomod2nix.locked}/overlay.nix")
-      ];
-    }
-  ),
-  mkGoEnv ? pkgs.mkGoEnv,
-  gomod2nix ? pkgs.gomod2nix,
+  pkgs ? import <nixpkgs> { },
 }:
 
 let
-  goEnv = mkGoEnv { pwd = ./.; };
+  overrides = (builtins.fromTOML (builtins.readFile ./rust-toolchain.toml));
 in
-pkgs.mkShell {
-  packages = [
-    goEnv
-    gomod2nix
-  ];
-}
+pkgs.callPackage (
+  {
+    stdenv,
+    mkShell,
+    rustup,
+    rustPlatform,
+  }:
+  mkShell {
+    strictDeps = true;
+    nativeBuildInputs = [
+      rustup
+      rustPlatform.bindgenHook
+    ];
+    # libraries here
+    buildInputs =
+      [
+      ];
+    RUSTC_VERSION = overrides.toolchain.channel;
+    # https://github.com/rust-lang/rust-bindgen#environment-variables
+    shellHook = ''
+      export PATH="''${CARGO_HOME:-~/.cargo}/bin":"$PATH"
+      export PATH="''${RUSTUP_HOME:-~/.rustup}/toolchains/$RUSTC_VERSION-${stdenv.hostPlatform.rust.rustcTarget}/bin":"$PATH"
+    '';
+  }
+) { }
+
